@@ -14,8 +14,9 @@ $jdkCandidates = @(
     (Join-Path $projectRoot ".tools/jdk/jdk-21.0.10+7"),
     $env:JAVA_HOME
 ) | Where-Object { $_ -and (Test-Path $_) }
+$jdkCandidates = @($jdkCandidates)
 
-if (-not $jdkCandidates) {
+if ($jdkCandidates.Count -eq 0) {
     throw "Java 21 JDK was not found. Set JAVA_HOME or place the local JDK in .tools/jdk/."
 }
 
@@ -105,4 +106,3 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Packaging finished in $distDir"
-
