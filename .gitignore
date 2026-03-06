@@ -1,4 +1,4 @@
-﻿target/
+target/
 out/
 .idea/
 .vscode/
@@ -7,3 +7,4 @@ out/
 .project
 .settings/
 .tools/
+dist/
