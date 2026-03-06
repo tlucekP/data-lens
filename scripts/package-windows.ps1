@@ -98,7 +98,15 @@ if ($Rebuild -or -not $fatJar) {
         throw "Maven was not found. Install Maven or place it in .tools/maven/."
     }
 
-    & $mavenCmd.Source clean package
+    $mavenExecutable = if ($mavenCmd.PSObject.Properties.Name -contains 'Source') {
+        $mavenCmd.Source
+    } elseif ($mavenCmd.PSObject.Properties.Name -contains 'FullName') {
+        $mavenCmd.FullName
+    } else {
+        [string]$mavenCmd
+    }
+
+    & $mavenExecutable clean package
     if ($LASTEXITCODE -ne 0) {
         throw "Maven build failed."
     }
@@ -133,8 +141,6 @@ if (Test-Path $outputPath) {
 }
 New-Item -ItemType Directory -Force -Path $packageTemp,$packageInput | Out-Null
 
-# Stage only the runtime artifact needed by jpackage to avoid bundling test
-# reports, test classes, and other machine-specific build metadata from target/.
 Copy-Item -Path $fatJar.FullName -Destination (Join-Path $packageInput $fatJar.Name) -Force
 
 $args = @(
@@ -144,7 +150,7 @@ $args = @(
     '--temp', $packageTemp,
     '--input', $packageInput,
     '--main-jar', $fatJar.Name,
-    '--main-class', 'com.datalens.app.MainApp',
+    '--main-class', 'com.datalens.app.DataLensLauncher',
     '--app-version', $AppVersion,
     '--vendor', 'DataLens'
 )
