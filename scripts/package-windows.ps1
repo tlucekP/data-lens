@@ -113,27 +113,36 @@ if (-not (Test-Path $jpackage)) {
 
 $distDir = Join-Path $projectRoot 'dist'
 $tempRoot = Join-Path $projectRoot '.jpackage-temp'
+$stagingRoot = Join-Path $tempRoot 'input'
 $packageTemp = Join-Path $tempRoot $Type
+$packageInput = Join-Path $stagingRoot $Type
 $outputPath = if ($Type -eq 'app-image') {
     Join-Path $distDir 'DataLens'
 } else {
     Join-Path $distDir ("DataLens-$AppVersion.$Type")
 }
-New-Item -ItemType Directory -Force -Path $distDir,$tempRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $distDir,$tempRoot,$stagingRoot | Out-Null
 if (Test-Path $packageTemp) {
     Remove-Item -Recurse -Force $packageTemp
+}
+if (Test-Path $packageInput) {
+    Remove-Item -Recurse -Force $packageInput
 }
 if (Test-Path $outputPath) {
     Remove-Item -Recurse -Force $outputPath
 }
-New-Item -ItemType Directory -Force -Path $packageTemp | Out-Null
+New-Item -ItemType Directory -Force -Path $packageTemp,$packageInput | Out-Null
+
+# Stage only the runtime artifact needed by jpackage to avoid bundling test
+# reports, test classes, and other machine-specific build metadata from target/.
+Copy-Item -Path $fatJar.FullName -Destination (Join-Path $packageInput $fatJar.Name) -Force
 
 $args = @(
     '--type', $Type,
     '--name', 'DataLens',
     '--dest', $distDir,
     '--temp', $packageTemp,
-    '--input', $targetDir,
+    '--input', $packageInput,
     '--main-jar', $fatJar.Name,
     '--main-class', 'com.datalens.app.MainApp',
     '--app-version', $AppVersion,

@@ -4,7 +4,7 @@ Date: 2026-03-06
 Scope: Step 2 (stabilization QA pass) + Step 3 (automated test baseline) after MVP scope freeze.
 
 ## Environment
-- Workspace: `D:\Python\AAA_Python_MAIN\data-lens`
+- Workspace: project root
 - Execution mode: terminal/sandbox + manual desktop run.
 
 ## Checklist Results (README Manual Test Workflow)
@@ -80,3 +80,4 @@ Scope: Step 2 (stabilization QA pass) + Step 3 (automated test baseline) after M
 - MVP validation is complete for current scope.
 - No blocking defects found in tested flows.
 - Remaining items are UX/product enhancements and can be scheduled after MVP release.
+

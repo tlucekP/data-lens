@@ -6,7 +6,7 @@ Tester: user
 Environment: Windows desktop
 
 ## Preconditions
-1. Open terminal in project root: `D:\Python\AAA_Python_MAIN\data-lens`
+1. Open terminal in the project root.
 2. Run app: `mvn javafx:run`
 3. Keep this checklist open and mark each item.
 
@@ -29,3 +29,4 @@ Environment: Windows desktop
 - Screenshot after step 3 (valid CSV loaded)
 - Screenshot after step 6 (error dialog visible)
 - Screenshot after step 7 (valid file loaded again)
+
