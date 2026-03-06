@@ -148,117 +148,76 @@ Release workflow output:
 - No data editing.
 - Header detection, type detection, and summary text are heuristic.
 
-## Actual Issues (Roadmap)
+## Actual Issues (Status)
 
 Project status summary:
 - MVP state is functionally OK and releaseable.
 - QA baseline is complete (automated tests + manual flow verification).
-- Current issues are mainly in maintainability, robustness, and operational reliability.
-- No blocking defect was found for current MVP usage.
+- Roadmap items R1 -> R6 were completed on 2026-03-06.
+- No blocking defect is currently tracked in the implemented roadmap areas.
 
 ### Findings by severity
 
-P2 - UI thread blocking during dataset load and profiling
-- Problem: file IO + profiling + warning generation + summary generation are executed in JavaFX UI thread, so larger files can freeze the app.
-- Location: `src/main/java/com/datalens/ui/MainController.java` (`loadDataset`).
-- Impact: weak UX responsiveness, risk of "app not responding" perception.
+Resolved P2 - UI thread blocking during dataset load and profiling
+- Status: resolved on 2026-03-06.
+- Outcome: dataset processing now runs on a background `Task`/executor and the UI exposes loading status with consistent button state handling.
 
-P2 - Packaging script tied to hardcoded artifact version/name
-- Problem: packaging references `datalens-0.1.0-SNAPSHOT-fat.jar` directly; if project version changes, packaging flow can fail.
-- Location: `scripts/package-windows.ps1` (fat jar path and `--main-jar`).
-- Impact: brittle release process, avoidable CI/CD failures.
+Resolved P2 - Packaging script tied to hardcoded artifact version/name
+- Status: resolved on 2026-03-06.
+- Outcome: `scripts/package-windows.ps1` now resolves `artifactId` and `version` from `pom.xml`, derives `AppVersion`, discovers the active `*-fat.jar`, and fails clearly on ambiguous artifacts.
+- Verification: `powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1` passed and produced `dist/DataLens`.
+- Verification scope note: dynamic jar resolution and current-version `app-image` packaging were executed in this repo; explicit version-bump and WiX `msi` replay were not rerun in the same pass.
 
-P3 - CSV delimiter detector can mis-handle escaped quotes
-- Problem: quote state toggling is naive for edge cases with escaped double quotes.
-- Location: `src/main/java/com/datalens/util/DelimiterDetector.java` (`countOutsideQuotes`).
-- Impact: wrong delimiter detection on tricky CSV input.
+Resolved P3 - CSV delimiter detector can mis-handle escaped quotes
+- Status: resolved on 2026-03-06.
+- Outcome: delimiter detection now handles escaped double quotes correctly and is covered by regression tests for escaped-quote and mixed-delimiter inputs.
 
-P3 - MainController is too broad (god-class tendency)
-- Problem: one class mixes UI concerns, validation, loading, profiling orchestration, and error presentation.
-- Location: `src/main/java/com/datalens/ui/MainController.java`.
-- Impact: harder testing, harder maintenance, rising complexity over time.
+Resolved P3 - MainController is too broad (god-class tendency)
+- Status: resolved on 2026-03-06.
+- Outcome: orchestration moved to `DatasetProcessingService`; `MainController` is now focused on UI state, dialogs, and bindings.
 
-P3 - Missing internal diagnostics/logging for runtime failures
-- Problem: errors are shown to user, but no internal structured logs are persisted.
-- Location: `src/main/java/com/datalens/ui/MainController.java` (`catch` + `showError`).
-- Impact: harder production troubleshooting and incident analysis.
+Resolved P3 - Missing internal diagnostics/logging for runtime failures
+- Status: resolved on 2026-03-06.
+- Outcome: structured info/error diagnostics are persisted to `%USERPROFILE%\.datalens\logs\datalens.log` without logging dataset contents.
 
-### Refactoring roadmap (to execute in next chat)
+### Refactoring roadmap
 
 R1 - Make dataset processing asynchronous
-- Scope: move load + profile pipeline off JavaFX UI thread using `Task`/background executor.
-- Deliverables:
-  - UI stays responsive during processing.
-  - Buttons disabled/enabled consistently during run.
-  - User sees progress/loading state.
-- Acceptance criteria:
-  - No UI freeze on larger sample files.
-  - Error handling still behaves identically from user perspective.
+- Status: completed on 2026-03-06.
+- Result: load + profile pipeline moved off the JavaFX UI thread using `Task` and a background executor.
+- Verification: UI status text and button state handling were added while preserving user-facing error dialogs.
 
 R2 - Decouple packaging from hardcoded jar version
-- Scope: make `package-windows.ps1` dynamically resolve current fat jar (or derive from Maven project version).
-- Deliverables:
-  - Script works after version bump without manual edits.
-  - Clear error if no unique fat jar is found.
-- Acceptance criteria:
-  - `app-image` and `msi` packaging pass after changing project version.
+- Status: completed on 2026-03-06.
+- Result: packaging resolves metadata from `pom.xml`, auto-derives `AppVersion`, and selects the active fat jar dynamically.
+- Verification: `app-image` packaging passed in this repository with the refactored script.
 
 R3 - Harden CSV delimiter detection
-- Scope: improve quote parsing in delimiter detection for escaped quote scenarios.
-- Deliverables:
-  - robust `countOutsideQuotes` behavior.
-  - new unit tests for delimiter edge cases.
-- Acceptance criteria:
-  - test set includes escaped quote and mixed delimiter edge inputs.
+- Status: completed on 2026-03-06.
+- Result: `countOutsideQuotes` now treats escaped double quotes safely.
+- Verification: regression tests cover escaped quotes and mixed delimiter edge cases.
 
 R4 - Split MainController responsibilities
-- Scope: introduce service layer for dataset orchestration (load -> profile -> warnings -> summary).
-- Deliverables:
-  - thinner `MainController` focused on UI state and bindings.
-  - orchestration logic unit-testable without JavaFX runtime.
-- Acceptance criteria:
-  - controller method size/complexity reduced.
-  - existing behavior unchanged.
+- Status: completed on 2026-03-06.
+- Result: service-layer orchestration is unit-testable without JavaFX runtime and controller complexity was reduced.
+- Verification: `DatasetProcessingServiceTest` exercises the pipeline outside the UI layer.
 
 R5 - Add operational diagnostics
-- Scope: add lightweight logging for load failures and key pipeline stages.
-- Deliverables:
-  - structured log lines (at least info/error) for file load attempts and failures.
-  - no sensitive data leakage in logs.
-- Acceptance criteria:
-  - reproducible errors are diagnosable from logs.
+- Status: completed on 2026-03-06.
+- Result: file-load attempts, pipeline stages, success, and failures are logged with lightweight structured metadata.
+- Verification: diagnostics log path is `%USERPROFILE%\.datalens\logs\datalens.log`.
 
 R6 - Security and resilience test extension
-- Scope: add non-functional tests to improve input hardening.
-- Test recommendations:
-  - XLSX zip-bomb/compression-ratio stress input (DoS resistance).
-  - Fuzz tests for malformed CSV/XLSX files.
-  - Very long row/cell payload stress tests (memory/time bounds).
-  - Encoding/BOM variants for CSV parsing robustness.
-  - XLSX formula/external-link cell handling checks.
-- Acceptance criteria:
-  - documented pass/fail outcomes and clear limits for safe processing.
-
-### PASS progress (2026-03-06)
-
-- R1 PASS: dataset processing now runs off the JavaFX UI thread via `Task` + single-thread background executor; toolbar status text exposes loading progress and buttons are disabled consistently during execution.
-- R2 PASS: `scripts/package-windows.ps1` now resolves `artifactId` + `version` from `pom.xml`, derives `AppVersion` automatically, finds the current `*-fat.jar` dynamically, and fails clearly on ambiguous artifacts.
-- R2 PASS verification: powershell -ExecutionPolicy Bypass -File .\\scripts\\package-windows.ps1 completed successfully on 2026-03-06 and produced dist/DataLens.\r\n- R2 verification scope for this pass: dynamic jar resolution and current-version pp-image packaging were executed; explicit version-bump and WiX msi replay were not rerun in this session.
-- R3 PASS: CSV delimiter detection now ignores escaped double quotes while scanning quoted segments; regression tests cover escaped-quote and mixed-delimiter edge input.
-- R4 PASS: orchestration logic moved into `DatasetProcessingService`, leaving `MainController` focused on UI state, file picking, confirmation dialog flow, and view updates.
-- R4 PASS verification: service pipeline is unit-tested without JavaFX runtime in `DatasetProcessingServiceTest`.
-- R5 PASS: lightweight diagnostics logging was added for load start, validation, profiling, warning generation, success, and failure paths.
-- R5 PASS operational note: logs are written to `%USERPROFILE%\.datalens\logs\datalens.log` with filename/extension/size metadata only; dataset contents are not logged.
-- R6 PASS: resilience tests now cover UTF-8 BOM CSV input, long CSV cell payloads, malformed XLSX input, formula-cell XLSX handling, and zip-bomb-like XLSX payload rejection.
-- R6 PASS verification: automated test suite passed on 2026-03-06 with `mvn test` using workspace-local JDK/Maven and reported `Tests run: 14, Failures: 0, Errors: 0, Skipped: 0`.
-- R6 PASS safe-processing limits currently verified in-repo:
+- Status: completed on 2026-03-06.
+- Result: the test suite now covers UTF-8 BOM CSV input, long CSV cell payloads, malformed XLSX input, XLSX formula-cell handling, and zip-bomb-like XLSX payload rejection.
+- Verification: `mvn test` on 2026-03-06 reported `Tests run: 14, Failures: 0, Errors: 0, Skipped: 0`.
+- Verified safe-processing limits in-repo:
   - CSV BOM variants: PASS.
   - CSV escaped-quote delimiter edge cases: PASS.
   - CSV long-cell stress at 20,000 characters: PASS.
   - XLSX invalid archive rejection: PASS.
   - XLSX formula evaluation read path: PASS.
   - XLSX zip-bomb-like compressed worksheet payload: PASS (rejected safely).
-
 ### Non-blocking UX backlog (already observed in manual QA)
 - Increase Warnings panel height and reduce Column Analysis vertical share.
 - Add explicit Reload feedback (timestamp/toast/status).
@@ -267,6 +226,7 @@ R6 - Security and resilience test extension
 ### Implementation note
 - The roadmap sequence R1 -> R2 -> R3 -> R4 -> R5 -> R6 was completed on 2026-03-06.
 - Further changes should keep behavior stable and treat the items above as the current baseline.
+
 
 
 
