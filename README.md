@@ -147,3 +147,103 @@ Release workflow output:
 - No charts.
 - No data editing.
 - Header detection, type detection, and summary text are heuristic.
+
+## Actual Issues (Roadmap)
+
+Project status summary:
+- MVP state is functionally OK and releaseable.
+- QA baseline is complete (automated tests + manual flow verification).
+- Current issues are mainly in maintainability, robustness, and operational reliability.
+- No blocking defect was found for current MVP usage.
+
+### Findings by severity
+
+P2 - UI thread blocking during dataset load and profiling
+- Problem: file IO + profiling + warning generation + summary generation are executed in JavaFX UI thread, so larger files can freeze the app.
+- Location: `src/main/java/com/datalens/ui/MainController.java` (`loadDataset`).
+- Impact: weak UX responsiveness, risk of "app not responding" perception.
+
+P2 - Packaging script tied to hardcoded artifact version/name
+- Problem: packaging references `datalens-0.1.0-SNAPSHOT-fat.jar` directly; if project version changes, packaging flow can fail.
+- Location: `scripts/package-windows.ps1` (fat jar path and `--main-jar`).
+- Impact: brittle release process, avoidable CI/CD failures.
+
+P3 - CSV delimiter detector can mis-handle escaped quotes
+- Problem: quote state toggling is naive for edge cases with escaped double quotes.
+- Location: `src/main/java/com/datalens/util/DelimiterDetector.java` (`countOutsideQuotes`).
+- Impact: wrong delimiter detection on tricky CSV input.
+
+P3 - MainController is too broad (god-class tendency)
+- Problem: one class mixes UI concerns, validation, loading, profiling orchestration, and error presentation.
+- Location: `src/main/java/com/datalens/ui/MainController.java`.
+- Impact: harder testing, harder maintenance, rising complexity over time.
+
+P3 - Missing internal diagnostics/logging for runtime failures
+- Problem: errors are shown to user, but no internal structured logs are persisted.
+- Location: `src/main/java/com/datalens/ui/MainController.java` (`catch` + `showError`).
+- Impact: harder production troubleshooting and incident analysis.
+
+### Refactoring roadmap (to execute in next chat)
+
+R1 - Make dataset processing asynchronous
+- Scope: move load + profile pipeline off JavaFX UI thread using `Task`/background executor.
+- Deliverables:
+  - UI stays responsive during processing.
+  - Buttons disabled/enabled consistently during run.
+  - User sees progress/loading state.
+- Acceptance criteria:
+  - No UI freeze on larger sample files.
+  - Error handling still behaves identically from user perspective.
+
+R2 - Decouple packaging from hardcoded jar version
+- Scope: make `package-windows.ps1` dynamically resolve current fat jar (or derive from Maven project version).
+- Deliverables:
+  - Script works after version bump without manual edits.
+  - Clear error if no unique fat jar is found.
+- Acceptance criteria:
+  - `app-image` and `msi` packaging pass after changing project version.
+
+R3 - Harden CSV delimiter detection
+- Scope: improve quote parsing in delimiter detection for escaped quote scenarios.
+- Deliverables:
+  - robust `countOutsideQuotes` behavior.
+  - new unit tests for delimiter edge cases.
+- Acceptance criteria:
+  - test set includes escaped quote and mixed delimiter edge inputs.
+
+R4 - Split MainController responsibilities
+- Scope: introduce service layer for dataset orchestration (load -> profile -> warnings -> summary).
+- Deliverables:
+  - thinner `MainController` focused on UI state and bindings.
+  - orchestration logic unit-testable without JavaFX runtime.
+- Acceptance criteria:
+  - controller method size/complexity reduced.
+  - existing behavior unchanged.
+
+R5 - Add operational diagnostics
+- Scope: add lightweight logging for load failures and key pipeline stages.
+- Deliverables:
+  - structured log lines (at least info/error) for file load attempts and failures.
+  - no sensitive data leakage in logs.
+- Acceptance criteria:
+  - reproducible errors are diagnosable from logs.
+
+R6 - Security and resilience test extension
+- Scope: add non-functional tests to improve input hardening.
+- Test recommendations:
+  - XLSX zip-bomb/compression-ratio stress input (DoS resistance).
+  - Fuzz tests for malformed CSV/XLSX files.
+  - Very long row/cell payload stress tests (memory/time bounds).
+  - Encoding/BOM variants for CSV parsing robustness.
+  - XLSX formula/external-link cell handling checks.
+- Acceptance criteria:
+  - documented pass/fail outcomes and clear limits for safe processing.
+
+### Non-blocking UX backlog (already observed in manual QA)
+- Increase Warnings panel height and reduce Column Analysis vertical share.
+- Add explicit Reload feedback (timestamp/toast/status).
+- Show total workbook sheet count in Dataset Overview for XLSX.
+
+### Implementation note for next chat
+- In the next chat, refactoring should follow this roadmap order: R1 -> R2 -> R3 -> R4 -> R5 -> R6.
+- Avoid feature expansion during refactor; keep behavior stable unless explicitly required by an issue above.
