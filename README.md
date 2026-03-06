@@ -64,7 +64,7 @@ Note: the current dependency setup targets Windows JavaFX artifacts because the 
 
 ## jpackage / Windows packaging plan
 
-The repository now includes a Windows packaging helper:
+The repository includes a Windows packaging helper:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1
@@ -83,11 +83,20 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type exe
 powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type msi
 ```
 
-Note: `exe` and `msi` packaging on Windows typically require WiX Toolset. If WiX is not installed, use the default `app-image` type first.
+For `exe` and `msi`, install WiX Toolset locally into `.tools/wix` with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-wix.ps1
+```
+
+Current status:
+
+- `app-image` packaging is verified in this repository.
+- WiX-based `exe` and `msi` packaging is prepared, but still environment-dependent. In this machine state, `light.exe` exits with code `216`, so installer packaging is not yet enabled in CI.
 
 ## GitHub automation
 
-The repository now includes GitHub Actions workflows for:
+The repository includes GitHub Actions workflows for:
 
 - CI build on push and pull request
 - release build on version tags like `v0.1.0`
@@ -99,7 +108,8 @@ CI workflow output:
 
 Release workflow output:
 
-- attaches the built jar artifacts to the GitHub Release
+- fat jar
+- Windows app image
 
 ## GitHub Releases publishing plan
 
@@ -117,6 +127,8 @@ Release workflow output:
 5. Load `samples/sample_valid.xlsx` and confirm the first relevant sheet is analyzed.
 6. Load `samples/sample_broken.xlsx` and confirm the app shows a safe error message instead of crashing.
 7. Re-open a valid file after the broken-file check and confirm the app still behaves normally.
+8. Run `powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1` and confirm `dist/DataLens` is created.
+9. If WiX is installed locally, run `powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type msi` only after validating WiX on the target machine.
 
 ## Included sample files
 
