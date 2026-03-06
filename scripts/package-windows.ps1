@@ -35,6 +35,17 @@ if (-not $mavenCmd) {
     throw "Maven was not found. Install Maven or place it in .tools/maven/."
 }
 
+if ($Type -eq 'exe' -or $Type -eq 'msi') {
+    $localWix = Join-Path $projectRoot '.tools/wix'
+    if ((Test-Path (Join-Path $localWix 'candle.exe')) -and (Test-Path (Join-Path $localWix 'light.exe'))) {
+        $env:PATH = "$localWix;$env:PATH"
+    }
+
+    if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue) -or -not (Get-Command light.exe -ErrorAction SilentlyContinue)) {
+        throw "WiX Toolset was not found. Run scripts/install-wix.ps1 or install WiX system-wide for exe/msi packaging."
+    }
+}
+
 $fatJar = Join-Path $projectRoot 'target/datalens-0.1.0-SNAPSHOT-fat.jar'
 if ($Rebuild -or -not (Test-Path $fatJar)) {
     & $mavenCmd.Source clean package
@@ -46,10 +57,6 @@ if ($Rebuild -or -not (Test-Path $fatJar)) {
 $jpackage = Join-Path $jdkHome 'bin/jpackage.exe'
 if (-not (Test-Path $jpackage)) {
     throw "jpackage.exe was not found in the selected JDK."
-}
-
-if (($Type -eq 'exe' -or $Type -eq 'msi') -and -not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
-    throw "WiX Toolset was not found in PATH. Use the default app-image type or install WiX for exe/msi packaging."
 }
 
 $distDir = Join-Path $projectRoot 'dist'
