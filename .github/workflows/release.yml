@@ -61,12 +61,52 @@ jobs:
       - name: Build MSI
         shell: powershell
         run: |
-          powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type msi
+          $wix = Resolve-Path '.\.tools\wix'
+          $env:DATALENS_WIX_REAL_LIGHT = Join-Path $wix 'light-real.exe'
+          $env:DATALENS_WIX_LIGHT_EXTRA = '-sval'
+          $env:PATH = "$wix;$env:PATH"
+          $temp = Join-Path $PWD '.jpackage-temp\msi'
+          if (Test-Path $temp) { Remove-Item -Recurse -Force $temp }
+          if (Test-Path '.\dist\DataLens-0.1.0.msi') { Remove-Item -Force '.\dist\DataLens-0.1.0.msi' }
+          New-Item -ItemType Directory -Force -Path $temp | Out-Null
+          & "$env:JAVA_HOME\bin\jpackage.exe" `
+            --type msi `
+            --name DataLens `
+            --dest dist `
+            --temp $temp `
+            --input target `
+            --main-jar datalens-0.1.0-SNAPSHOT-fat.jar `
+            --main-class com.datalens.app.MainApp `
+            --app-version 0.1.0 `
+            --vendor DataLens `
+            --win-shortcut `
+            --win-dir-chooser `
+            --verbose
 
       - name: Build EXE
         shell: powershell
         run: |
-          powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type exe
+          $wix = Resolve-Path '.\.tools\wix'
+          $env:DATALENS_WIX_REAL_LIGHT = Join-Path $wix 'light-real.exe'
+          $env:DATALENS_WIX_LIGHT_EXTRA = '-sval'
+          $env:PATH = "$wix;$env:PATH"
+          $temp = Join-Path $PWD '.jpackage-temp\exe'
+          if (Test-Path $temp) { Remove-Item -Recurse -Force $temp }
+          if (Test-Path '.\dist\DataLens-0.1.0.exe') { Remove-Item -Force '.\dist\DataLens-0.1.0.exe' }
+          New-Item -ItemType Directory -Force -Path $temp | Out-Null
+          & "$env:JAVA_HOME\bin\jpackage.exe" `
+            --type exe `
+            --name DataLens `
+            --dest dist `
+            --temp $temp `
+            --input target `
+            --main-jar datalens-0.1.0-SNAPSHOT-fat.jar `
+            --main-class com.datalens.app.MainApp `
+            --app-version 0.1.0 `
+            --vendor DataLens `
+            --win-shortcut `
+            --win-dir-chooser `
+            --verbose
 
       - name: Zip app-image
         shell: powershell
