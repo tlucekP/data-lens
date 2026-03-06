@@ -31,6 +31,21 @@ jobs:
         run: |
           powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type app-image
 
+      - name: Install WiX
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\install-wix.ps1
+
+      - name: Build MSI
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type msi
+
+      - name: Build EXE
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type exe
+
       - name: Zip app-image
         shell: powershell
         run: |
@@ -42,4 +57,6 @@ jobs:
           files: |
             target/datalens-0.1.0-SNAPSHOT-fat.jar
             dist/DataLens-app-image.zip
+            dist/DataLens-0.1.0.msi
+            dist/DataLens-0.1.0.exe
           generate_release_notes: true
