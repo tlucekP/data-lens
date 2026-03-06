@@ -20,6 +20,17 @@ DataLens is a local JavaFX desktop MVP for quick profiling of CSV and XLSX datas
 - Local heuristic summary generator with an analyst-style output
 - Sample input files for manual testing
 
+## What Follows in the Next Version
+
+Planned product direction for the next version:
+
+- Export features for summary and analysis outputs
+- Charts for quick visual inspection of numeric and categorical fields
+- Basic data editing for selected cell values and simple corrections
+- Drag and drop file loading directly into the main window
+
+These items are not part of the current MVP yet.
+
 ## Run in development
 
 1. Install Java 21 and Maven.
@@ -53,31 +64,49 @@ Note: the current dependency setup targets Windows JavaFX artifacts because the 
 
 ## jpackage / Windows packaging plan
 
-The project is prepared so the next step can package the app through `jpackage` into `.exe` or `.msi`.
+The repository now includes a Windows packaging helper:
 
-Suggested flow:
-
-1. Build the fat jar with `mvn clean package`.
-2. Use `jpackage` with `--input target`, `--main-jar datalens-0.1.0-SNAPSHOT-fat.jar`, and `--main-class com.datalens.app.MainApp`.
-3. Add Windows-specific icons and installer metadata in the next iteration.
-
-Example shape of the command:
-
-```bash
-jpackage ^
-  --type exe ^
-  --name DataLens ^
-  --input target ^
-  --main-jar datalens-0.1.0-SNAPSHOT-fat.jar ^
-  --main-class com.datalens.app.MainApp
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1
 ```
+
+Defaults:
+
+- builds the fat jar if needed
+- creates a `dist` directory
+- generates a Windows `app-image`
+
+Optional types:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type exe
+powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1 -Type msi
+```
+
+Note: `exe` and `msi` packaging on Windows typically require WiX Toolset. If WiX is not installed, use the default `app-image` type first.
+
+## GitHub automation
+
+The repository now includes GitHub Actions workflows for:
+
+- CI build on push and pull request
+- release build on version tags like `v0.1.0`
+
+CI workflow output:
+
+- regular jar
+- fat jar
+
+Release workflow output:
+
+- attaches the built jar artifacts to the GitHub Release
 
 ## GitHub Releases publishing plan
 
-1. Create or update the GitHub repository.
-2. Run `mvn clean package`.
-3. Upload the fat jar to a GitHub Release.
-4. In the packaging iteration, upload the `jpackage` generated `.exe` or `.msi` as release assets.
+1. Push to GitHub.
+2. Create a version tag such as `v0.1.0`.
+3. Push the tag.
+4. Let the release workflow build and attach artifacts automatically.
 
 ## Manual test workflow
 
