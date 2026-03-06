@@ -239,11 +239,34 @@ R6 - Security and resilience test extension
 - Acceptance criteria:
   - documented pass/fail outcomes and clear limits for safe processing.
 
+### PASS progress (2026-03-06)
+
+- R1 PASS: dataset processing now runs off the JavaFX UI thread via `Task` + single-thread background executor; toolbar status text exposes loading progress and buttons are disabled consistently during execution.
+- R2 PASS: `scripts/package-windows.ps1` now resolves `artifactId` + `version` from `pom.xml`, derives `AppVersion` automatically, finds the current `*-fat.jar` dynamically, and fails clearly on ambiguous artifacts.
+- R2 PASS verification: powershell -ExecutionPolicy Bypass -File .\\scripts\\package-windows.ps1 completed successfully on 2026-03-06 and produced dist/DataLens.\r\n- R2 verification scope for this pass: dynamic jar resolution and current-version pp-image packaging were executed; explicit version-bump and WiX msi replay were not rerun in this session.
+- R3 PASS: CSV delimiter detection now ignores escaped double quotes while scanning quoted segments; regression tests cover escaped-quote and mixed-delimiter edge input.
+- R4 PASS: orchestration logic moved into `DatasetProcessingService`, leaving `MainController` focused on UI state, file picking, confirmation dialog flow, and view updates.
+- R4 PASS verification: service pipeline is unit-tested without JavaFX runtime in `DatasetProcessingServiceTest`.
+- R5 PASS: lightweight diagnostics logging was added for load start, validation, profiling, warning generation, success, and failure paths.
+- R5 PASS operational note: logs are written to `%USERPROFILE%\.datalens\logs\datalens.log` with filename/extension/size metadata only; dataset contents are not logged.
+- R6 PASS: resilience tests now cover UTF-8 BOM CSV input, long CSV cell payloads, malformed XLSX input, formula-cell XLSX handling, and zip-bomb-like XLSX payload rejection.
+- R6 PASS verification: automated test suite passed on 2026-03-06 with `mvn test` using workspace-local JDK/Maven and reported `Tests run: 14, Failures: 0, Errors: 0, Skipped: 0`.
+- R6 PASS safe-processing limits currently verified in-repo:
+  - CSV BOM variants: PASS.
+  - CSV escaped-quote delimiter edge cases: PASS.
+  - CSV long-cell stress at 20,000 characters: PASS.
+  - XLSX invalid archive rejection: PASS.
+  - XLSX formula evaluation read path: PASS.
+  - XLSX zip-bomb-like compressed worksheet payload: PASS (rejected safely).
+
 ### Non-blocking UX backlog (already observed in manual QA)
 - Increase Warnings panel height and reduce Column Analysis vertical share.
 - Add explicit Reload feedback (timestamp/toast/status).
 - Show total workbook sheet count in Dataset Overview for XLSX.
 
-### Implementation note for next chat
-- In the next chat, refactoring should follow this roadmap order: R1 -> R2 -> R3 -> R4 -> R5 -> R6.
-- Avoid feature expansion during refactor; keep behavior stable unless explicitly required by an issue above.
+### Implementation note
+- The roadmap sequence R1 -> R2 -> R3 -> R4 -> R5 -> R6 was completed on 2026-03-06.
+- Further changes should keep behavior stable and treat the items above as the current baseline.
+
+
+

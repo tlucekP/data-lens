@@ -1,7 +1,7 @@
 param(
     [ValidateSet("app-image", "exe", "msi")]
     [string]$Type = "app-image",
-    [string]$AppVersion = "0.1.0",
+    [string]$AppVersion,
     [switch]$Rebuild
 )
 
@@ -9,6 +9,18 @@ $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
+
+[xml]$pom = Get-Content (Join-Path $projectRoot 'pom.xml')
+$artifactId = $pom.project.artifactId
+$projectVersion = $pom.project.version
+
+if ([string]::IsNullOrWhiteSpace($artifactId) -or [string]::IsNullOrWhiteSpace($projectVersion)) {
+    throw "Could not resolve artifactId/version from pom.xml."
+}
+
+if ([string]::IsNullOrWhiteSpace($AppVersion)) {
+    $AppVersion = ($projectVersion -replace '-.*$', '')
+}
 
 $jdkCandidates = @(
     (Join-Path $projectRoot ".tools/jdk/jdk-21.0.10+7"),
@@ -37,8 +49,39 @@ if ($Type -eq 'exe' -or $Type -eq 'msi') {
     }
 }
 
-$fatJar = Join-Path $projectRoot 'target/datalens-0.1.0-SNAPSHOT-fat.jar'
-if ($Rebuild -or -not (Test-Path $fatJar)) {
+$targetDir = Join-Path $projectRoot 'target'
+
+function Resolve-FatJar {
+    param(
+        [string]$Directory,
+        [string]$ExpectedPrefix,
+        [switch]$AllowMissing
+    )
+
+    $fatJars = @(Get-ChildItem -Path $Directory -Filter '*-fat.jar' -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.BaseName -like "$ExpectedPrefix*" })
+
+    if ($fatJars.Count -eq 1) {
+        return $fatJars[0]
+    }
+
+    if ($fatJars.Count -eq 0) {
+        if ($AllowMissing) {
+            return $null
+        }
+        throw "No fat jar matching '$ExpectedPrefix*-fat.jar' was found in target/. Run a package build first or pass -Rebuild."
+    }
+
+    $jarList = ($fatJars | Select-Object -ExpandProperty Name) -join ', '
+    throw "Multiple fat jars were found in target/: $jarList. Clean target/ or rebuild to leave a single packaging artifact."
+}
+
+$fatJar = $null
+if (-not $Rebuild) {
+    $fatJar = Resolve-FatJar -Directory $targetDir -ExpectedPrefix "$artifactId-$projectVersion" -AllowMissing
+}
+
+if ($Rebuild -or -not $fatJar) {
     $mavenCmd = Get-Command mvn -ErrorAction SilentlyContinue
     if (-not $mavenCmd) {
         $mavenCmd = Get-Command mvn.cmd -ErrorAction SilentlyContinue
@@ -59,6 +102,8 @@ if ($Rebuild -or -not (Test-Path $fatJar)) {
     if ($LASTEXITCODE -ne 0) {
         throw "Maven build failed."
     }
+
+    $fatJar = Resolve-FatJar -Directory $targetDir -ExpectedPrefix "$artifactId-$projectVersion"
 }
 
 $jpackage = Join-Path $jdkHome 'bin/jpackage.exe'
@@ -88,8 +133,8 @@ $args = @(
     '--name', 'DataLens',
     '--dest', $distDir,
     '--temp', $packageTemp,
-    '--input', (Join-Path $projectRoot 'target'),
-    '--main-jar', 'datalens-0.1.0-SNAPSHOT-fat.jar',
+    '--input', $targetDir,
+    '--main-jar', $fatJar.Name,
     '--main-class', 'com.datalens.app.MainApp',
     '--app-version', $AppVersion,
     '--vendor', 'DataLens'

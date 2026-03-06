@@ -60,12 +60,16 @@ public final class DelimiterDetector {
         return bestLineHits <= 0 ? ',' : bestCandidate;
     }
 
-    private static int countOutsideQuotes(String line, char delimiter) {
+    static int countOutsideQuotes(String line, char delimiter) {
         boolean inQuotes = false;
         int count = 0;
         for (int index = 0; index < line.length(); index++) {
             char current = line.charAt(index);
             if (current == '"') {
+                if (inQuotes && index + 1 < line.length() && line.charAt(index + 1) == '"') {
+                    index++;
+                    continue;
+                }
                 inQuotes = !inQuotes;
             } else if (!inQuotes && current == delimiter) {
                 count++;

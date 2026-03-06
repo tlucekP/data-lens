@@ -1,15 +1,11 @@
 package com.datalens.ui;
 
-import com.datalens.analysis.SummaryGenerator;
-import com.datalens.analysis.WarningEngine;
-import com.datalens.loader.CsvLoader;
-import com.datalens.loader.LoadedDataset;
-import com.datalens.loader.XlsxLoader;
 import com.datalens.model.ColumnProfile;
 import com.datalens.model.DatasetProfile;
-import com.datalens.profiler.DataProfiler;
+import com.datalens.service.DatasetProcessingService;
 import com.datalens.util.FileValidators;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -24,14 +20,21 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainController {
+    private static final DateTimeFormatter STATUS_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss");
+
     @FXML
     private Button loadFileButton;
     @FXML
     private Button reloadButton;
+    @FXML
+    private Label statusValueLabel;
     @FXML
     private Label fileValueLabel;
     @FXML
@@ -61,13 +64,15 @@ public class MainController {
     @FXML
     private TextArea summaryTextArea;
 
-    private final CsvLoader csvLoader = new CsvLoader();
-    private final XlsxLoader xlsxLoader = new XlsxLoader();
-    private final DataProfiler dataProfiler = new DataProfiler();
-    private final WarningEngine warningEngine = new WarningEngine();
-    private final SummaryGenerator summaryGenerator = new SummaryGenerator();
+    private final DatasetProcessingService datasetProcessingService = new DatasetProcessingService();
+    private final ExecutorService processingExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "datalens-dataset-processing");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private Path lastLoadedFile;
+    private Task<DatasetProfile> activeLoadTask;
 
     @FXML
     private void initialize() {
@@ -96,14 +101,14 @@ public class MainController {
         Stage stage = (Stage) loadFileButton.getScene().getWindow();
         java.io.File file = fileChooser.showOpenDialog(stage);
         if (file != null) {
-            loadDataset(file.toPath());
+            startDatasetLoad(file.toPath());
         }
     }
 
     @FXML
     private void handleReload() {
         if (lastLoadedFile != null) {
-            loadDataset(lastLoadedFile);
+            startDatasetLoad(lastLoadedFile);
         }
     }
 
@@ -116,30 +121,59 @@ public class MainController {
         statsColumn.setCellValueFactory(cellData -> new ReadOnlyStringWrapper(cellData.getValue().statsText()));
     }
 
-    private void loadDataset(Path file) {
+    private void startDatasetLoad(Path file) {
+        if (activeLoadTask != null && activeLoadTask.isRunning()) {
+            return;
+        }
+
         try {
             FileValidators.validateSelectedFile(file);
             if (FileValidators.shouldWarnAboutLargeFile(file) && !confirmLargeFileLoad(file)) {
                 return;
             }
-
-            LoadedDataset dataset = switch (FileValidators.extensionOf(file)) {
-                case "csv" -> csvLoader.load(file);
-                case "xlsx" -> xlsxLoader.load(file);
-                default -> throw new IOException("Unsupported file type.");
-            };
-
-            DatasetProfile baseProfile = dataProfiler.profile(dataset);
-            List<String> warnings = warningEngine.analyze(baseProfile);
-            String summary = summaryGenerator.generate(baseProfile, warnings);
-            DatasetProfile finalProfile = baseProfile.withGeneratedContent(warnings, summary);
-
-            updateView(finalProfile);
-            lastLoadedFile = file;
-            reloadButton.setDisable(false);
         } catch (Exception exception) {
             showError("Could not load file", exception.getMessage());
+            return;
         }
+
+        Task<DatasetProfile> loadTask = new Task<>() {
+            @Override
+            protected DatasetProfile call() throws Exception {
+                updateMessage("Preparing load...");
+                return datasetProcessingService.process(file, this::updateMessage);
+            }
+        };
+
+        activeLoadTask = loadTask;
+        statusValueLabel.textProperty().unbind();
+        statusValueLabel.textProperty().bind(loadTask.messageProperty());
+        setControlsLoading(true);
+
+        loadTask.setOnSucceeded(event -> {
+            statusValueLabel.textProperty().unbind();
+            DatasetProfile profile = loadTask.getValue();
+            updateView(profile);
+            lastLoadedFile = file;
+            activeLoadTask = null;
+            setControlsLoading(false);
+            statusValueLabel.setText("Loaded " + file.getFileName() + " at " + timestampNow());
+        });
+        loadTask.setOnFailed(event -> {
+            statusValueLabel.textProperty().unbind();
+            activeLoadTask = null;
+            setControlsLoading(false);
+            statusValueLabel.setText("Load failed at " + timestampNow());
+            Throwable exception = loadTask.getException();
+            showError("Could not load file", exception == null ? null : exception.getMessage());
+        });
+        loadTask.setOnCancelled(event -> {
+            statusValueLabel.textProperty().unbind();
+            activeLoadTask = null;
+            setControlsLoading(false);
+            statusValueLabel.setText("Load cancelled.");
+        });
+
+        processingExecutor.submit(loadTask);
     }
 
     private boolean confirmLargeFileLoad(Path file) throws IOException {
@@ -165,6 +199,7 @@ public class MainController {
     }
 
     private void resetView() {
+        statusValueLabel.setText("Ready");
         fileValueLabel.setText("No file loaded");
         sheetValueLabel.setText("-");
         rowsValueLabel.setText("0");
@@ -174,7 +209,16 @@ public class MainController {
         columnTable.getItems().clear();
         warningsListView.getItems().clear();
         summaryTextArea.setText("Load a CSV or XLSX file to generate profiling notes.");
-        reloadButton.setDisable(true);
+        setControlsLoading(false);
+    }
+
+    private void setControlsLoading(boolean loading) {
+        loadFileButton.setDisable(loading);
+        reloadButton.setDisable(loading || lastLoadedFile == null);
+    }
+
+    private String timestampNow() {
+        return LocalTime.now().format(STATUS_TIME_FORMAT);
     }
 
     private void showError(String title, String message) {

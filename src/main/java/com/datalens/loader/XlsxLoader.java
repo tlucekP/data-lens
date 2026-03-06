@@ -5,6 +5,7 @@ import com.datalens.util.DatasetNormalizer;
 import com.datalens.util.FileValidators;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.openxml4j.opc.PackageAccess;
+import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
@@ -19,8 +20,22 @@ import java.util.List;
 import java.util.Locale;
 
 public class XlsxLoader {
+    static final double MIN_INFLATE_RATIO = 0.01d;
+    static final long MAX_ENTRY_SIZE_BYTES = 50L * 1024L * 1024L;
+
+    static {
+        if (System.getProperty("log4j2.loggerContextFactory") == null) {
+            System.setProperty(
+                    "log4j2.loggerContextFactory",
+                    "org.apache.logging.log4j.simple.SimpleLoggerContextFactory"
+            );
+        }
+    }
+
     public LoadedDataset load(Path sourceFile) throws IOException {
         FileValidators.validateSelectedFile(sourceFile);
+        ZipSecureFile.setMinInflateRatio(MIN_INFLATE_RATIO);
+        ZipSecureFile.setMaxEntrySize(MAX_ENTRY_SIZE_BYTES);
 
         try (OPCPackage packageSource = OPCPackage.open(sourceFile.toFile(), PackageAccess.READ);
              XSSFWorkbook workbook = new XSSFWorkbook(packageSource)) {

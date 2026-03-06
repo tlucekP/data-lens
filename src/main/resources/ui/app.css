@@ -41,6 +41,13 @@
     -fx-padding: 0 16 0 6;
 }
 
+.toolbar-status {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #135d66;
+    -fx-padding: 0 18 0 6;
+}
+
 .metric-label {
     -fx-font-size: 12px;
     -fx-text-fill: #5c6b7a;

@@ -26,6 +26,8 @@
             <items>
                 <Button fx:id="loadFileButton" text="Load File" onAction="#handleLoadFile" styleClass="primary-button" />
                 <Button fx:id="reloadButton" text="Reload" onAction="#handleReload" />
+                <Label text="Status:" styleClass="toolbar-label" />
+                <Label fx:id="statusValueLabel" styleClass="toolbar-status" />
                 <Pane HBox.hgrow="ALWAYS" />
                 <Label text="File:" styleClass="toolbar-label" />
                 <Label fx:id="fileValueLabel" styleClass="toolbar-value" />
