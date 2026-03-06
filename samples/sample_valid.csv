@@ -1,0 +1,8 @@
+﻿order_id,order_date,customer_email,status,amount,discount
+ORD-1001,2025-01-02,anna@example.com,Paid,120.50,10
+ORD-1002,2025-01-03,,Paid,89.90,0
+
+ORD-1003,2025-01-04,petr@example.com,Refund,-12.00,0
+ORD-1004,2025/01/05,lucie@example.com,Paid,9999.00,15
+ORD-1005,2025-01-06,marek@example.com,Pending,54.25,5
+ORD-1006,2025-01-07,sofia@example.com,Paid,61.10,0

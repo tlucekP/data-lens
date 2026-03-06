@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.datalens.ui.MainController"
+            prefWidth="1180"
+            prefHeight="820"
+            styleClass="app-shell">
+    <top>
+        <ToolBar styleClass="top-toolbar">
+            <items>
+                <Button fx:id="loadFileButton" text="Load File" onAction="#handleLoadFile" styleClass="primary-button" />
+                <Button fx:id="reloadButton" text="Reload" onAction="#handleReload" />
+                <Pane HBox.hgrow="ALWAYS" />
+                <Label text="File:" styleClass="toolbar-label" />
+                <Label fx:id="fileValueLabel" styleClass="toolbar-value" />
+                <Label text="Sheet:" styleClass="toolbar-label" />
+                <Label fx:id="sheetValueLabel" styleClass="toolbar-value" />
+            </items>
+        </ToolBar>
+    </top>
+
+    <center>
+        <VBox spacing="16" styleClass="content-pane">
+            <padding>
+                <Insets top="18" right="18" bottom="18" left="18" />
+            </padding>
+
+            <VBox spacing="12" styleClass="section-card">
+                <Label text="Dataset Overview" styleClass="section-title" />
+                <GridPane hgap="16" vgap="10">
+                    <children>
+                        <Label text="Rows:" styleClass="metric-label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label fx:id="rowsValueLabel" styleClass="metric-value" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label text="Columns:" styleClass="metric-label" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                        <Label fx:id="columnsValueLabel" styleClass="metric-value" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+                        <Label text="Empty rows:" styleClass="metric-label" GridPane.columnIndex="4" GridPane.rowIndex="0" />
+                        <Label fx:id="emptyRowsValueLabel" styleClass="metric-value" GridPane.columnIndex="5" GridPane.rowIndex="0" />
+                        <Label text="Detected header:" styleClass="metric-label" GridPane.columnIndex="6" GridPane.rowIndex="0" />
+                        <Label fx:id="headerValueLabel" styleClass="metric-value" GridPane.columnIndex="7" GridPane.rowIndex="0" />
+                    </children>
+                </GridPane>
+            </VBox>
+
+            <VBox spacing="12" styleClass="section-card" VBox.vgrow="ALWAYS">
+                <Label text="Column Analysis" styleClass="section-title" />
+                <TableView fx:id="columnTable" VBox.vgrow="ALWAYS" minHeight="280">
+                    <columns>
+                        <TableColumn fx:id="columnNameColumn" text="Column" prefWidth="190" />
+                        <TableColumn fx:id="typeColumn" text="Type" prefWidth="110" />
+                        <TableColumn fx:id="missingColumn" text="Missing" prefWidth="120" />
+                        <TableColumn fx:id="uniqueColumn" text="Unique" prefWidth="110" />
+                        <TableColumn fx:id="statsColumn" text="Stats" prefWidth="520" />
+                    </columns>
+                </TableView>
+            </VBox>
+
+            <VBox spacing="12" styleClass="section-card">
+                <Label text="Warnings" styleClass="section-title" />
+                <ListView fx:id="warningsListView" prefHeight="140" />
+            </VBox>
+
+            <VBox spacing="12" styleClass="section-card">
+                <Label text="Summary" styleClass="section-title" />
+                <TextArea fx:id="summaryTextArea" prefRowCount="5" />
+            </VBox>
+        </VBox>
+    </center>
+</BorderPane>
