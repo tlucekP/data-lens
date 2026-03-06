@@ -38,6 +38,8 @@ if (-not $mavenCmd) {
 if ($Type -eq 'exe' -or $Type -eq 'msi') {
     $localWix = Join-Path $projectRoot '.tools/wix'
     if ((Test-Path (Join-Path $localWix 'candle.exe')) -and (Test-Path (Join-Path $localWix 'light.exe'))) {
+        $env:DATALENS_WIX_REAL_LIGHT = Join-Path $localWix 'light-real.exe'
+        $env:DATALENS_WIX_LIGHT_EXTRA = '-sval'
         $env:PATH = "$localWix;$env:PATH"
     }
 
@@ -60,12 +62,19 @@ if (-not (Test-Path $jpackage)) {
 }
 
 $distDir = Join-Path $projectRoot 'dist'
-New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+$tempRoot = Join-Path $projectRoot '.jpackage-temp'
+$packageTemp = Join-Path $tempRoot $Type
+New-Item -ItemType Directory -Force -Path $distDir,$tempRoot | Out-Null
+if (Test-Path $packageTemp) {
+    Remove-Item -Recurse -Force $packageTemp
+}
+New-Item -ItemType Directory -Force -Path $packageTemp | Out-Null
 
 $args = @(
     '--type', $Type,
     '--name', 'DataLens',
     '--dest', $distDir,
+    '--temp', $packageTemp,
     '--input', (Join-Path $projectRoot 'target'),
     '--main-jar', 'datalens-0.1.0-SNAPSHOT-fat.jar',
     '--main-class', 'com.datalens.app.MainApp',
