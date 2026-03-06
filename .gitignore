@@ -8,3 +8,4 @@ out/
 .settings/
 .tools/
 dist/
+.jpackage-temp/

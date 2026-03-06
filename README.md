@@ -92,7 +92,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-wix.ps1
 Current status:
 
 - `app-image` packaging is verified in this repository.
-- WiX-based `exe` and `msi` packaging is prepared, but still environment-dependent. In this machine state, `light.exe` exits with code `216`, so installer packaging is not yet enabled in CI.
+- WiX-based `exe` and `msi` packaging is verified locally.
+- The packaging script uses a workspace-local `.jpackage-temp/` directory to avoid `%TEMP%`/Windows Defender issues seen on some machines.
+- A local `light.exe` wrapper suppresses MSI validation (`-sval`) and reports errors to the console instead of crashing with a modal dialog.
 
 ## GitHub automation
 
