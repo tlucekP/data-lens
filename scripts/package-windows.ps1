@@ -23,18 +23,6 @@ $jdkHome = $jdkCandidates[0]
 $env:JAVA_HOME = $jdkHome
 $env:PATH = "$jdkHome\bin;$env:PATH"
 
-$mavenCmd = Get-Command mvn.cmd -ErrorAction SilentlyContinue
-if (-not $mavenCmd) {
-    $localMaven = Join-Path $projectRoot '.tools/maven/apache-maven-3.9.12/bin/mvn.cmd'
-    if (Test-Path $localMaven) {
-        $mavenCmd = Get-Item $localMaven
-    }
-}
-
-if (-not $mavenCmd) {
-    throw "Maven was not found. Install Maven or place it in .tools/maven/."
-}
-
 if ($Type -eq 'exe' -or $Type -eq 'msi') {
     $localWix = Join-Path $projectRoot '.tools/wix'
     if ((Test-Path (Join-Path $localWix 'candle.exe')) -and (Test-Path (Join-Path $localWix 'light.exe'))) {
@@ -50,6 +38,22 @@ if ($Type -eq 'exe' -or $Type -eq 'msi') {
 
 $fatJar = Join-Path $projectRoot 'target/datalens-0.1.0-SNAPSHOT-fat.jar'
 if ($Rebuild -or -not (Test-Path $fatJar)) {
+    $mavenCmd = Get-Command mvn -ErrorAction SilentlyContinue
+    if (-not $mavenCmd) {
+        $mavenCmd = Get-Command mvn.cmd -ErrorAction SilentlyContinue
+    }
+
+    if (-not $mavenCmd) {
+        $localMaven = Join-Path $projectRoot '.tools/maven/apache-maven-3.9.12/bin/mvn.cmd'
+        if (Test-Path $localMaven) {
+            $mavenCmd = Get-Item $localMaven
+        }
+    }
+
+    if (-not $mavenCmd) {
+        throw "Maven was not found. Install Maven or place it in .tools/maven/."
+    }
+
     & $mavenCmd.Source clean package
     if ($LASTEXITCODE -ne 0) {
         throw "Maven build failed."
@@ -64,9 +68,17 @@ if (-not (Test-Path $jpackage)) {
 $distDir = Join-Path $projectRoot 'dist'
 $tempRoot = Join-Path $projectRoot '.jpackage-temp'
 $packageTemp = Join-Path $tempRoot $Type
+$outputPath = if ($Type -eq 'app-image') {
+    Join-Path $distDir 'DataLens'
+} else {
+    Join-Path $distDir ("DataLens-$AppVersion.$Type")
+}
 New-Item -ItemType Directory -Force -Path $distDir,$tempRoot | Out-Null
 if (Test-Path $packageTemp) {
     Remove-Item -Recurse -Force $packageTemp
+}
+if (Test-Path $outputPath) {
+    Remove-Item -Recurse -Force $outputPath
 }
 New-Item -ItemType Directory -Force -Path $packageTemp | Out-Null
 
@@ -93,3 +105,4 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Packaging finished in $distDir"
+
